@@ -23,59 +23,55 @@
 ;; in the directory 'elpa, it can load automatically.
 (setq load-prefer-newer t)
 ;; show the current line
-;; (global-hl-line-mode)
-(global-set-key (kbd "<f9>") 'whitespace-mode)
-(global-set-key (kbd "<f7>") 'hl-line-mode)
-;; highlight the current column.
-(use-package col-highlight
+(hl-line-mode)
+;; load basic configuration
+(use-package basic
   :load-path "~/.emacs.d/etc"
-  ;; :config
-  ;; (column-highlight-mode)
-  )
+  :custom
+  (user-full-name "Rifiuto")
+  :init
+  ;; add some headers for shell, c and python
+  (auto-insert-mode)
+  (setq auto-insert-query nil)
+  :config
+  (defun headers//insert-string()
+	(concat
+	 (make-string 80 ?*)
+	 "\n"
+	 "Copyright © " (substring (current-time-string) -4) " " (user-full-name) "\n"
+	 "File Name: " (file-name-nondirectory buffer-file-name) "\n"
+	 "Author: " (user-full-name)"\n"
+	 "Email: " user-mail-address "\n"
+	 "Created: " (format-time-string "%Y-%m-%d %T (%Z)" (current-time)) "\n"
+	 "Last Update: \n"
+	 "         By: \n"
+	 "Description: \n"
+	 (make-string 80 ?*)))
+  (defun headers/insert-string(&optional prefix)
+	"Add the comment symbol."
+	(or prefix (setq prefix comment-start))
+	(mapconcat
+	 (lambda (x) (concat prefix x))
+	 (split-string (headers//insert-string) "\n") "\n"))
 
-;; about the frame
-(if (display-graphic-p)
-    (setq initial-frame-alist
-          '((tool-bar-lines . 0)
-            (fullscreen . maximized)))
-  (setq initial-frame-alist '((tool-bar-lines . 0))))
-(setq default-frame-alist
-      '((tool-bar-lines . 0)
-        (fullscreen . maximized)))
-;; set the title
-(setq-default frame-title-format '("sayno"))
-;; basic mode
-(progn
-  (scroll-bar-mode -1)
-  (tool-bar-mode -1)
-  (menu-bar-mode)
-  (blink-cursor-mode -1)
-  (recentf-mode)
-  ;; highlight the paren
-  (show-paren-mode)
-  ;; Delete parentheses in pairs
-  (electric-pair-mode 1)
-  ;; show the column number
-  (column-number-mode))
+  (setq auto-insert-alist
+		'(((python-mode . "Python program") nil
+           "#!/usr/bin/env python\n"
+           "# -*- coding: utf-8 -*-\n"
+           (headers/insert-string) "\n")
+          ((c-mode . "C program") nil
+           "/*"
+           (string-trim-left (headers/insert-string " ")) "*/\n"
+           "#include<stdio.h>\n"
+           "#include<string.h>\n")
+          ((sh-mode . "Shell script") nil
+           "#!/usr/bin/bash\n"
+           (headers/insert-string) "\n"))))
 
-(add-hook 'after-init-hook (lambda ()
-							 (display-time-mode)
-							 (setq display-time-24hr-format t)
-							 (setq display-time-day-and-date t)))
-;;
+
+
+;; change the prefix for outline-minor-mode
 (customize-set-variable 'outline-minor-mode-prefix [(control o)])
-
-;; backup and file related
-(setq make-backup-files nil)
-(setq auto-save-default t)
-(setq-default indent-tabs-mode t)
-;; 4 is more popular than 8.
-(setq-default tab-width 4)
-;; set font
-(add-to-list 'default-frame-alist '(font . "DejaVu Sans Mono-11"))
-;; UTF-8 as default encoding
-(set-language-environment "UTF-8")
-(set-default-coding-systems 'utf-8-unix)
 
 
 ;; alias
@@ -110,22 +106,6 @@
 ;; magit
 (use-package magit)
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;; load theme ;;;;;;;;;;;;;;;;;
-;; (use-package solarized-theme
-;;   :config
-;;   (if (daemonp)
-;; 	  (load-theme 'solarized-gruvbox-light t)
-;; 	(load-theme 'solarized-gruvbox-dark t)))
-(use-package doom-themes
-  :custom-face
-  (mode-line ((t (:background "gray15" :foreground "lime green" :box nil))))
-  :config
-  (if (daemonp)
-	  (load-theme 'doom-gruvboxy t)
-	(load-theme 'doom-gruvbox t)))
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
 ;;;
 (use-package neotree
   :defer 2
@@ -150,7 +130,7 @@
   (prog-mode . rainbow-delimiters-mode)
   (LaTeX-mode . rainbow-delimiters-mode)
   :custom-face
-  (rainbow-delimiters-depth-1-face ((t (:foreground "#00ffcc"))))
+  (rainbow-delimiters-depth-1-face ((t (:foreground "#ffd700")))) ;00ffcc
   (rainbow-delimiters-depth-2-face ((t (:foreground "#e67300"))))
   (rainbow-delimiters-depth-3-face ((t (:foreground "#1ac6ff"))))
   (rainbow-delimiters-depth-4-face ((t (:foreground "#ff1ab2"))))
@@ -163,7 +143,8 @@
   :hook
   ((python-mode . company-mode)
    (c-mode . company-mode)
-   (emacs-lisp-mode . company-mode))
+   (emacs-lisp-mode . company-mode)
+   (sh-mode . company-mode))
   :custom
   (company-show-numbers nil)
   (company-idle-delay 0.01)
@@ -183,6 +164,7 @@
 
 
 (use-package multiple-cursors
+  :defer t
   :bind
   ("C-S-c C-S-c" . mc/edit-lines)
   ("C->" . mc/mark-next-like-this)
@@ -206,11 +188,15 @@
   (setq dashboard-footer-messages '("我是真的帅"))
   (setq dashboard-items '((recents  . 5)
                           (bookmarks . 5)
-                          (projects . 5)
-                          (agenda . 5)
+                          ;; (projects . 5)
+                          ;; (agenda . 5)
                           (registers . 5)))
   (add-hook 'after-init-hook (lambda () (dashboard-refresh-buffer)))
   )
+(use-package page-break-lines
+  :defer t
+  :hook (after-init . page-break-lines-mode))
+
 (use-package projectile)
 (use-package vterm
   :config
@@ -220,9 +206,7 @@
             (buffer-face-mode t))))
 
 
-
-
-(set-frame-parameter (selected-frame) 'alpha '(75 . 90))
+(set-frame-parameter (selected-frame) 'alpha '(80 . 90))
 (add-to-list 'default-frame-alist '(alpha . (95 . 90)))
 (defun toggle-transparency ()
   (interactive)
@@ -236,7 +220,6 @@
               100)
          '(80 . 60) '(100 . 100)))))
 (global-set-key (kbd "C-c t") 'toggle-transparency)
-
 
 
 
@@ -266,15 +249,14 @@
  '(company-show-quick-access nil nil nil "Customized with use-package company")
  '(outline-minor-mode-prefix [(control o)])
  '(package-selected-packages
-   '(doom-modeline org vterm use-package solarized-theme rainbow-delimiters python-mode projectile pdf-tools org-bullets neotree multiple-cursors magit lsp-ui lsp-jedi lsp-ivy lispy latex-preview-pane jedi highlight-parentheses flycheck elpy ein doom-themes dashboard company-irony company-c-headers cdlatex beacon auctex all-the-icons)))
+   '(org-superstar csv-mode circadian hide-mode-line page-break-lines bash-completion emacs-bash-completion org-inline-pdf doom-modeline org vterm use-package solarized-theme rainbow-delimiters python-mode projectile pdf-tools org-bullets neotree multiple-cursors magit lsp-ui lsp-jedi lsp-ivy lispy latex-preview-pane jedi highlight-parentheses flycheck elpy ein doom-themes dashboard company-irony company-c-headers cdlatex beacon auctex all-the-icons)))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
- '(menu ((t (:background "green"))))
- '(mode-line ((t (:background "gray15" :foreground "lime green" :box nil))))
- '(rainbow-delimiters-depth-1-face ((t (:foreground "#00ffcc"))))
+ '(doom-modeline-bar ((t (:background "red"))))
+ '(rainbow-delimiters-depth-1-face ((t (:foreground "#ffd700"))))
  '(rainbow-delimiters-depth-2-face ((t (:foreground "#e67300"))))
  '(rainbow-delimiters-depth-3-face ((t (:foreground "#1ac6ff"))))
  '(rainbow-delimiters-depth-4-face ((t (:foreground "#ff1ab2"))))

@@ -67,9 +67,11 @@
 ;;     :config
 ;;     (which-key-mode))
 (use-package ein
+  :config
+  (add-hook 'ein-mode-hook 'cdlatex-mode)
   :custom
- (ein:jupyter-default-notebook-directory "~/PycharmProjects/pymatlab/jp")
- (ein:output-area-inlined-images t))
+  (ein:jupyter-default-notebook-directory "~/PycharmProjects/pymatlab/jp")
+  (ein:output-area-inlined-images t) )
 
 (add-hook 'python-mode-hook
 		  (lambda ()
